@@ -10,9 +10,9 @@ const Category = require("../../module/BlogModule/caetgorymodule.js");
 // ============================
 const createContent = async (req, res) => {
   try {
-    const { name, description, category } = req.body;
+    const { name, description, category,author } = req.body;
 
-    if (!name || !description || !category) {
+    if (!name || !description || !category || !author) {
       return res.status(400).json({
         success: false,
         message: "Name, description, and category are required",
@@ -57,6 +57,7 @@ const createContent = async (req, res) => {
       name,
       description,
       category,
+      author,
       images: uploadedImages,
     });
 
@@ -109,7 +110,7 @@ const getHomeData = async (req, res) => {
 const updateHomeData = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, category } = req.body;
+    const { name, description, author, category } = req.body;
 
     const updateFields = {};
 
@@ -121,7 +122,11 @@ const updateHomeData = async (req, res) => {
       updateFields.description = description.trim();
     }
 
-    if (category) {
+    if (author?.trim()) {
+      updateFields.author = author.trim();
+    }
+
+    if (category?.trim()) {
       const categoryExists = await Category.findById(category);
       if (!categoryExists) {
         return res.status(404).json({
@@ -132,40 +137,37 @@ const updateHomeData = async (req, res) => {
       updateFields.category = category;
     }
 
-    // ✅ Handle Multiple Image Update
+    // Handle image replacement (if new images sent → replace all)
     if (req.files && req.files.images) {
-      const files = Array.isArray(req.files.images)
-        ? req.files.images
-        : [req.files.images];
-
+      const files = Array.isArray(req.files.images) ? req.files.images : [req.files.images];
       const uploadedImages = [];
 
-      for (let file of files) {
+      for (const file of files) {
         const uploadRes = await imagekit.upload({
           file: file.data,
           fileName: `product-update-${Date.now()}-${file.name}`,
           folder: "/productImages",
           useUniqueFileName: true,
         });
-
         uploadedImages.push(uploadRes.url);
       }
 
       updateFields.images = uploadedImages;
     }
 
+    // Prevent empty update
     if (Object.keys(updateFields).length === 0) {
       return res.status(400).json({
         success: false,
-        message: "No fields to update",
+        message: "No valid fields provided for update",
       });
     }
 
     const updatedProduct = await Product.findByIdAndUpdate(
       id,
       { $set: updateFields },
-      { new: true }
-    );
+      { new: true, runValidators: true }
+    ).populate("category", "name");
 
     if (!updatedProduct) {
       return res.status(404).json({
@@ -179,7 +181,6 @@ const updateHomeData = async (req, res) => {
       message: "Product updated successfully",
       data: updatedProduct,
     });
-
   } catch (error) {
     console.error("Update Error:", error);
     return res.status(500).json({
