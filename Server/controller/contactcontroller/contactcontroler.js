@@ -4,8 +4,11 @@ const Contact = require("../../module/contactmodule/contactmodule");
 const nodemailer = require("nodemailer");
 const axios = require("axios");
 
+// ✅ SMTP transporter for domain email
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: "smtpout.secureserver.net", // domain SMTP
+  port: 465,
+  secure: true,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
@@ -14,10 +17,9 @@ const transporter = nodemailer.createTransport({
 
 const createContactMessage = async (req, res) => {
   try {
-    // ✅ Frontend sends "name", so we destructure "name" (not "usernamee")
     const { usernamee, email, phone, subject, message, captcha } = req.body;
 
-    // ✅ 1. Check required fields
+    // ✅ required fields
     if (!usernamee || !email || !phone || !subject || !message) {
       return res.status(400).json({
         success: false,
@@ -25,7 +27,7 @@ const createContactMessage = async (req, res) => {
       });
     }
 
-    // ✅ 2. Check captcha token presence
+    // ✅ captcha check
     if (!captcha) {
       return res.status(400).json({
         success: false,
@@ -33,15 +35,13 @@ const createContactMessage = async (req, res) => {
       });
     }
 
-    // ✅ 3. Verify reCAPTCHA with Google (before saving to DB)
+    // ✅ captcha verification
     const verificationResponse = await axios.post(
       "https://www.google.com/recaptcha/api/siteverify",
       null,
       {
         params: {
-          secret:
-            process.env.RECAPTCHA_SECRET_KEY ||
-            "6LfP7nEsAAAAAAQtIwfaaTZYscG5QDae558ts0Xo",
+          secret: process.env.RECAPTCHA_SECRET_KEY,
           response: captcha,
           remoteip: req.ip,
         },
@@ -51,46 +51,46 @@ const createContactMessage = async (req, res) => {
     if (!verificationResponse.data.success) {
       return res.status(400).json({
         success: false,
-        message: "reCAPTCHA verification failed. Please try again.",
+        message: "reCAPTCHA verification failed",
       });
     }
 
-    // ✅ 4. Save to MongoDB (only after captcha passes)
+    // ✅ save to DB
     const contact = await Contact.create({
-      usernamee,   // make sure your Mongoose schema uses "name" (see note below)
+      usernamee,
       email,
       phone,
       subject,
       message,
     });
 
-    // ✅ 5. Send notification email to admin
+    // ✅ admin mail
     await transporter.sendMail({
-      from: `"Website Enquiry" <${process.env.EMAIL_USER}>`,
-      to: process.env.ADMIN_EMAIL || process.env.EMAIL_USER,
+      from: `"ATLA Knots Website" <${process.env.EMAIL_USER}>`,
+      to: process.env.ADMIN_EMAIL,
       subject: `New Contact Message: ${subject}`,
       html: `
-        <h2 style="color:#c0392b;">New Contact Enquiry</h2>
-        <p><b>Name:</b> ${usernamee}</p>
-        <p><b>Email:</b> ${email}</p>
-        <p><b>Phone:</b> ${phone}</p>
-        <p><b>Subject:</b> ${subject}</p>
-        <p><b>Message:</b><br/>${message}</p>
+      <h2>New Contact Enquiry</h2>
+      <p><b>Name:</b> ${usernamee}</p>
+      <p><b>Email:</b> ${email}</p>
+      <p><b>Phone:</b> ${phone}</p>
+      <p><b>Subject:</b> ${subject}</p>
+      <p><b>Message:</b> ${message}</p>
       `,
     });
 
-    // ✅ 6. Send confirmation email to the user
+    // ✅ user confirmation mail
     await transporter.sendMail({
       from: `"ATLA Knots Solution" <${process.env.EMAIL_USER}>`,
       to: email,
-      subject: `We received your message — ${subject}`,
+      subject: `We received your message`,
       html: `
-        <h2 style="color:#c0392b;">Thank you, ${usernamee}!</h2>
-        <p>We have received your message and will get back to you within 1–2 business days.</p>
-        <hr/>
-        <p><b>Your message:</b><br/>${message}</p>
-        <br/>
-        <p style="color:#888;">ATLA Knots Solution | +91 78696 36070 | admin@atlaknots.com</p>
+      <h2>Thank you ${usernamee}</h2>
+      <p>Your message has been received.</p>
+      <p>We will contact you soon.</p>
+      <hr/>
+      <p><b>Your Message:</b></p>
+      <p>${message}</p>
       `,
     });
 
@@ -101,9 +101,10 @@ const createContactMessage = async (req, res) => {
     });
   } catch (error) {
     console.error("Contact Error:", error);
+
     return res.status(500).json({
       success: false,
-      message: "Something went wrong",
+      message: "Server error",
       error: error.message,
     });
   }
