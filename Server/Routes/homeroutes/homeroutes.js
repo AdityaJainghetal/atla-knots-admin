@@ -9,6 +9,7 @@ const {
 
 } = require("../../controller/Homecontroller/homecontroller");
 
+
 router.post("/create", createContent);
 router.get("/product", getHomeData);
 router.get("/users", getHomeData);
