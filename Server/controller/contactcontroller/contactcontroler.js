@@ -20,12 +20,12 @@ const createContactMessage = async (req, res) => {
     const { usernamee, email, phone, subject, message, captcha } = req.body;
 
     // ✅ required fields
-    if (!usernamee || !email || !phone || !subject || !message) {
-      return res.status(400).json({
-        success: false,
-        message: "All fields are required",
-      });
-    }
+    // if (!usernamee || !email || !phone || !subject || !message) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: "All fields are required",
+    //   });
+    // }
 
     // ✅ captcha check
     if (!captcha) {

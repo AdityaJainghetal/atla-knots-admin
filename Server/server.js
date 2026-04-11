@@ -18,6 +18,8 @@ const technologyRoute = require("./Routes/technologyroutes/technologyRoute.js");
 const techcategoryRoute = require("./Routes/technologyroutes/categoryRoute.js");
 const blogRoutes = require("./Routes/Blogroute/categoryRoute.js");
 const galleryRoutes = require("./Routes/galleryroutes/galleryroutes.js");
+const portfolioRoutes = require("./Routes/portfolioroute/portfolioroute.js");
+const portfoliocategoryRoutes = require("./Routes/portfolioroute/categoryRoute.js");
 dns.setServers(["8.8.8.8", "1.1.1.1", "0.0.0.0"]);
 
 const app = express();
@@ -63,6 +65,13 @@ app.use("/api/technology/product", technologyRoute);
 app.use("/tech", techRoutes);
 app.use("/api/gallery", galleryRoutes);
 app.use("/query", queryRoutes);
+
+app.use("/portfolio", portfolioRoutes);
+app.use("/category/portfolio", portfoliocategoryRoutes);
+
+
+
+
 
 app.get("/", (req, res) => {
   res.send("🚀 Server is running successfully");
