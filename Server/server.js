@@ -20,6 +20,9 @@ const blogRoutes = require("./Routes/Blogroute/categoryRoute.js");
 const galleryRoutes = require("./Routes/galleryroutes/galleryroutes.js");
 const portfolioRoutes = require("./Routes/portfolioroute/portfolioroute.js");
 const portfoliocategoryRoutes = require("./Routes/portfolioroute/categoryRoute.js");
+const jobapplyRoutes = require("./Routes/Jobroutes/jobapplyroutes.js");
+const jobapplyCategoryRoutes = require("./Routes/Jobroutes/jobcategoryRoute.js");
+const jobapplicationRoutes = require("./Routes/Jobroutes/jobApplicationRoutes.js");
 dns.setServers(["8.8.8.8", "1.1.1.1", "0.0.0.0"]);
 
 const app = express();
@@ -68,6 +71,12 @@ app.use("/query", queryRoutes);
 
 app.use("/portfolio", portfolioRoutes);
 app.use("/category/portfolio", portfoliocategoryRoutes);
+
+
+app.use("/jobapply", jobapplyRoutes);
+app.use("/category/jobapply", jobapplyCategoryRoutes);
+app.use("/jobapplication", jobapplicationRoutes);
+
 
 
 
