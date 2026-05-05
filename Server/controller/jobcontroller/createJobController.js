@@ -1,11 +1,33 @@
-
 const ApplyJob = require("../../module/Jobmodule/jobmodule");
 const JobCategory = require("../../module/Jobmodule/jobcaetgorymodule"); // Fixed spelling
+const cloudinary = require("../../utils/cloudinary");
+
+const uploadResumeToCloudinary = async (resumeFile) => {
+  const validTypes = [
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ];
+
+  if (!validTypes.includes(resumeFile.mimetype)) {
+    throw new Error("Resume must be a PDF, DOC, or DOCX file.");
+  }
+
+  const fileData = `data:${resumeFile.mimetype};base64,${resumeFile.data.toString("base64")}`;
+  const uploadResponse = await cloudinary.uploader.upload(fileData, {
+    resource_type: "auto",
+    folder: "resumes",
+    public_id: `resume_${Date.now()}`,
+  });
+
+  return uploadResponse.secure_url;
+};
 
 // ====================== CREATE ======================
 const createApplyJob = async (req, res) => {
   try {
     const { title, category, description, endDate } = req.body;
+    const resumeFile = req.files?.resume;
 
     // Check if category exists
     const categoryExists = await JobCategory.findById(category);
@@ -16,11 +38,17 @@ const createApplyJob = async (req, res) => {
       });
     }
 
+    let resumeUrl;
+    if (resumeFile) {
+      resumeUrl = await uploadResumeToCloudinary(resumeFile);
+    }
+
     const newJob = new ApplyJob({
       title,
       category,
       description,
       endDate,
+      resumeUrl,
     });
 
     const savedJob = await newJob.save();
@@ -28,7 +56,7 @@ const createApplyJob = async (req, res) => {
     // Populate category while returning
     const populatedJob = await ApplyJob.findById(savedJob._id).populate(
       "category",
-      "name title"   // Add more fields if needed
+      "name title",
     );
 
     res.status(201).json({
@@ -48,7 +76,7 @@ const createApplyJob = async (req, res) => {
 const getAllApplyJobs = async (req, res) => {
   try {
     const jobs = await ApplyJob.find()
-      .populate("category", "name title")   // Fixed & improved
+      .populate("category", "name title") // Fixed & improved
       .sort({ createdAt: -1 });
 
     res.status(200).json({
@@ -69,7 +97,7 @@ const getApplyJobById = async (req, res) => {
   try {
     const job = await ApplyJob.findById(req.params.id).populate(
       "category",
-      "name title"
+      "name title",
     );
 
     if (!job) {
@@ -105,10 +133,16 @@ const updateApplyJob = async (req, res) => {
       }
     }
 
+    const updateData = { ...req.body };
+    const resumeFile = req.files?.resume;
+    if (resumeFile) {
+      updateData.resumeUrl = await uploadResumeToCloudinary(resumeFile);
+    }
+
     const updatedJob = await ApplyJob.findByIdAndUpdate(
       req.params.id,
-      req.body,
-      { new: true, runValidators: true }
+      updateData,
+      { new: true, runValidators: true },
     ).populate("category", "name title");
 
     if (!updatedJob) {

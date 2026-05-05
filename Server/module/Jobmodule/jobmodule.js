@@ -10,6 +10,7 @@ const productSchema = new mongoose.Schema(
     },
     description: { type: String, required: true },
     endDate: { type: Date, required: true },
+    resumeUrl: { type: String },
     createdTime: { type: Date, default: Date.now },
   },
 
