@@ -1,10 +1,20 @@
+const mongoose = require("mongoose");
 const JobApplication = require("../../module/Jobmodule/applicationmodule"); // Path adjust karo
 const ApplyJob = require("../../module/Jobmodule/jobmodule");
-             // Job Posting Model
+
+const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
+
 const applyToJob = async (req, res) => {
   try {
     const { jobId } = req.params;
     const { name, email, phone, coverLetter } = req.body;
+
+    if (!isValidObjectId(jobId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid job ID",
+      });
+    }
 
     const jobExists = await ApplyJob.findById(jobId);
     if (!jobExists) {
@@ -33,8 +43,9 @@ const applyToJob = async (req, res) => {
     const savedApplication = await newApplication.save();
 
     // Populate job title while returning
-    const populatedApp = await JobApplication.findById(savedApplication._id)
-      .populate("job", "title category endDate");
+    const populatedApp = await JobApplication.findById(
+      savedApplication._id,
+    ).populate("job", "title category endDate");
 
     res.status(201).json({
       success: true,
@@ -53,7 +64,7 @@ const applyToJob = async (req, res) => {
 const getAllApplications = async (req, res) => {
   try {
     const applications = await JobApplication.find()
-      .populate("job", "title endDate")   // ← Job Title yahan aa raha hai
+      .populate("job", "title endDate") // ← Job Title yahan aa raha hai
       .sort({ appliedAt: -1 });
 
     res.status(200).json({
@@ -69,13 +80,22 @@ const getAllApplications = async (req, res) => {
 // ====================== GET APPLICATIONS BY JOB ======================
 const getApplicationsByJob = async (req, res) => {
   try {
-    const applications = await JobApplication.find({ job: req.params.jobId })
+    const { jobId } = req.params;
+
+    if (!isValidObjectId(jobId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid job ID",
+      });
+    }
+
+    const applications = await JobApplication.find({ job: jobId })
       .populate("job", "title endDate")
       .sort({ appliedAt: -1 });
 
     res.status(200).json({
       success: true,
-      jobTitle: applications[0]?.job?.title || "N/A",   // Extra job title top level
+      jobTitle: applications[0]?.job?.title || "N/A",
       count: applications.length,
       data: applications,
     });
@@ -92,11 +112,13 @@ const updateApplicationStatus = async (req, res) => {
     const updated = await JobApplication.findByIdAndUpdate(
       req.params.id,
       { status },
-      { new: true }
+      { new: true },
     ).populate("job", "title");
 
     if (!updated) {
-      return res.status(404).json({ success: false, message: "Application not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Application not found" });
     }
 
     res.status(200).json({
